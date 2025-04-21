@@ -7,9 +7,10 @@ use Exception;
 
 class ModelOtentikasi extends Model
 {
-    protected $table = "otentikasi";
     protected $primayKey = "id";
-    protected $allowedFields = ['email', 'password'];
+
+    protected $table = 'users';
+    protected $allowedFields = ['name', 'email', 'password'];
 
     function getEmail($email)
     {

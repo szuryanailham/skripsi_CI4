@@ -13,6 +13,7 @@ $routes->group('api', function ($routes) {
     // Auth Routes (Tanpa Filter)
     $routes->post('auth/register', 'AuthController::register');
     $routes->post('auth/login', 'AuthController::login');
+    $routes->post('auth/logout', 'AuthController::logout');
 
     // Resource Routes
     $routes->resource('orders', [
