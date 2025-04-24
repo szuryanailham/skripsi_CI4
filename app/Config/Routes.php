@@ -8,8 +8,11 @@ use CodeIgniter\Router\RouteCollection;
 
 $routes->get('/', 'Home::index');
 
+
 // Define RESTful API routes
 $routes->group('api', function ($routes) {
+    $routes->get('home/events', 'Home::events');
+    
     // Auth Routes (Tanpa Filter)
     $routes->post('auth/register', 'AuthController::register');
     $routes->post('auth/login', 'AuthController::login');
@@ -21,7 +24,7 @@ $routes->group('api', function ($routes) {
         'namespace'  => 'App\Controllers',
  // Tambahkan otentikasi untuk semua order
     ]);
-    
+        
     $routes->resource('users', [
         'controller' => 'UsersController',
         'namespace'  => 'App\Controllers',
@@ -40,4 +43,6 @@ $routes->group('api', function ($routes) {
     // Custom Order Routes (Dengan Filter)
     $routes->get('orders/(:num)/invoice', 'OrderController::downloadInvoice/$1', ['filter' => 'otentikasi']);
     $routes->put('orders/(:num)/verify', 'OrderController::verifyOrder', ['filter' => 'otentikasi']);
+    $routes->get('order/donwload/(:num)', 'OrderController::downloadInvoice/$1');
+
 });

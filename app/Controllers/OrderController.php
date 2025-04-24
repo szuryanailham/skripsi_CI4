@@ -6,11 +6,12 @@ use CodeIgniter\RESTful\ResourceController;
 use App\Models\OrderModel;
 use App\Models\UserModel;
 use App\Models\EventModel;
+use Dompdf\Dompdf;
 use Exception;
 
 class OrderController extends ResourceController
 {
-    protected $modelName = 'App\Models\OrderModel';
+    protected $modelName = OrderModel::class;
     protected $format    = 'json';
 
     // GET: Ambil semua order
@@ -24,10 +25,10 @@ class OrderController extends ResourceController
             }
 
             return $this->respond([
-                'status' => 200,
+                'status'  => 200,
                 'message' => 'Data order berhasil diambil',
-                'data' => $orders
-            ], 200);
+                'data'    => $orders
+            ]);
         } catch (Exception $e) {
             return $this->failServerError('Terjadi kesalahan server: ' . $e->getMessage());
         }
@@ -44,10 +45,10 @@ class OrderController extends ResourceController
             }
 
             return $this->respond([
-                'status' => 200,
+                'status'  => 200,
                 'message' => 'Data order berhasil ditemukan',
-                'data' => $order
-            ], 200);
+                'data'    => $order
+            ]);
         } catch (Exception $e) {
             return $this->failServerError('Terjadi kesalahan server: ' . $e->getMessage());
         }
@@ -59,14 +60,13 @@ class OrderController extends ResourceController
         try {
             $data = $this->request->getJSON(true);
 
-            // Validasi input
             if (!$this->validate([
                 'order_number' => 'required|is_unique[orders.order_number]',
-                'user_id' => 'required|integer',
-                'event_id' => 'required|integer',
+                'user_id'      => 'required|integer',
+                'event_id'     => 'required|integer',
                 'total_amount' => 'required|decimal',
-                'status' => 'required|in_list[pending,paid,canceled]',
-                'paid' => 'required|integer'
+                'status'       => 'required|in_list[pending,paid,canceled]',
+                'paid'         => 'required|integer'
             ])) {
                 return $this->failValidationErrors($this->validator->getErrors());
             }
@@ -76,9 +76,9 @@ class OrderController extends ResourceController
             }
 
             return $this->respondCreated([
-                'status' => 201,
+                'status'  => 201,
                 'message' => 'Order berhasil dibuat',
-                'data' => $data
+                'data'    => $data
             ]);
         } catch (Exception $e) {
             return $this->failServerError('Terjadi kesalahan server: ' . $e->getMessage());
@@ -100,10 +100,10 @@ class OrderController extends ResourceController
             }
 
             return $this->respond([
-                'status' => 200,
+                'status'  => 200,
                 'message' => 'Order berhasil diperbarui',
-                'data' => $data
-            ], 200);
+                'data'    => $data
+            ]);
         } catch (Exception $e) {
             return $this->failServerError('Terjadi kesalahan server: ' . $e->getMessage());
         }
@@ -122,7 +122,7 @@ class OrderController extends ResourceController
             }
 
             return $this->respondDeleted([
-                'status' => 200,
+                'status'  => 200,
                 'message' => 'Order berhasil dihapus'
             ]);
         } catch (Exception $e) {
@@ -130,34 +130,33 @@ class OrderController extends ResourceController
         }
     }
 
+    // PUT: Verifikasi order sebagai "paid"
     public function verifyOrder($id = null)
     {
         try {
             if (!$id) {
                 return $this->failValidationErrors('ID tidak boleh kosong');
             }
-    
+
             $order = $this->model->find($id);
             if (!$order) {
                 return $this->failNotFound('Order tidak ditemukan');
             }
-    
+
             if ($order['status'] === 'paid') {
                 return $this->fail('Order sudah berstatus paid');
             }
-    
-            // Ambil data dari request (fix untuk PUT)
+
             $data = $this->request->getRawInput();
             if (empty($data)) {
                 return $this->failValidationErrors('Data tidak boleh kosong');
             }
-    
-            // Update status order ke "paid"
+
             $updateData = ['status' => 'paid'];
             if (!$this->model->update($id, $updateData)) {
                 return $this->fail('Gagal memperbarui order');
             }
-    
+
             return $this->respond([
                 'status'  => true,
                 'message' => 'Order berhasil diverifikasi sebagai paid',
@@ -168,41 +167,71 @@ class OrderController extends ResourceController
         }
     }
 
-    public function getInvoiceData($id)
+    // GET: Ambil data invoice lengkap berdasarkan order ID
+    public function getInvoiceData($id = null)
     {
-        $orderModel = new OrderModel();
-        $userModel  = new UserModel();
-        $eventModel = new EventModel();
+        try {
+            $orderModel = new OrderModel();
+            $userModel  = new UserModel();
+            $eventModel = new EventModel();
 
-        // Ambil data order berdasarkan ID
-        $order = $orderModel->find($id);
-        if (!$order) {
-            return $this->failNotFound('Order tidak ditemukan');
+            $order = $orderModel->find($id);
+            if (!$order) {
+                return $this->failNotFound('Order tidak ditemukan');
+            }
+
+            $user = $userModel->find($order['user_id']);
+            if (!$user) {
+                return $this->failNotFound('Pengguna tidak ditemukan');
+            }
+
+            $event = $eventModel->find($order['event_id']);
+            if (!$event) {
+                return $this->failNotFound('Event tidak ditemukan');
+            }
+
+            return $this->respond([
+                'status'  => true,
+                'message' => 'Data invoice berhasil diambil',
+                'data'    => [
+                    'order' => $order,
+                    'user'  => $user,
+                    'event' => $event
+                ]
+            ]);
+        } catch (Exception $e) {
+            return $this->failServerError('Terjadi kesalahan server: ' . $e->getMessage());
         }
-
-        // Ambil data pengguna terkait
-        $user = $userModel->find($order['user_id']);
-        if (!$user) {
-            return $this->failNotFound('Pengguna tidak ditemukan');
-        }
-
-        // Ambil data event terkait
-        $event = $eventModel->find($order['event_id']);
-        if (!$event) {
-            return $this->failNotFound('Event tidak ditemukan');
-        }
-
-        // Kembalikan data dalam format JSON
-        return $this->respond([
-            'status' => true,
-            'message' => 'Data invoice berhasil diambil',
-            'data' => [
-                'order' => $order,
-                'user'  => $user,
-                'event' => $event
-            ]
-        ]);
     }
-    
 
+    public function downloadInvoice($id)
+{
+    $orderModel = new OrderModel();
+    $userModel  = new UserModel();
+    $eventModel = new EventModel();
+
+    $order = $orderModel->find($id);
+    if (!$order) return $this->failNotFound('Order tidak ditemukan');
+
+    $user = $userModel->find($order['user_id']);
+    $event = $eventModel->find($order['event_id']);
+
+    // Siapkan HTML dari view
+    $html = view('pdf/order_ticket', [
+        'order' => $order,
+        'user'  => $user,
+        'event' => $event
+    ]);
+
+    // Generate PDF
+    $dompdf = new Dompdf();
+    $dompdf->loadHtml($html);
+    $dompdf->setPaper('A4', 'portrait');
+    $dompdf->render();
+
+    // Download file
+    return $this->response->setHeader('Content-Type', 'application/pdf')
+                          ->setHeader('Content-Disposition', 'attachment;filename="invoice-'.$order['order_number'].'.pdf"')
+                          ->setBody($dompdf->output());
+}
 }

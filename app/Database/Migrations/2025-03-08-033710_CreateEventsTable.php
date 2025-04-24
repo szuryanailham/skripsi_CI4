@@ -19,14 +19,30 @@ class CreateEventsTable extends Migration
                 'type'       => 'VARCHAR',
                 'constraint' => 255,
             ],
+            'slug' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 255,
+                'unique'     => true,
+            ],
             'description' => [
                 'type' => 'TEXT',
                 'null' => true,
+            ],
+            'time' => [
+             'type' => 'TIME',
             ],
             'location' => [
                 'type'       => 'VARCHAR',
                 'constraint' => 255,
                 'null'       => true,
+            ],
+            'price' => [
+                'type'       => 'DECIMAL',
+                'constraint' => '10,2',
+                'default'    => 0.00,
+            ],
+            'date' => [
+                'type' => 'DATE',
             ],
             'start_date' => [
                 'type' => 'DATETIME',

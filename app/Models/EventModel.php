@@ -11,8 +11,9 @@ class EventModel extends Model
     protected $useAutoIncrement = true;
     protected $returnType       = 'array';
     protected $useSoftDeletes   = false;
-    protected $protectFields    = true;
-    protected $allowedFields    = ['name', 'date', 'location', 'description'];
+    protected $protectFields    = true;  protected $allowedFields = [
+        'title', 'description', 'location', 'start_date', 'end_date', 'price', 'slug', 'status'
+    ];
 
     protected bool $allowEmptyInserts = false;
     protected bool $updateOnlyChanged = true;

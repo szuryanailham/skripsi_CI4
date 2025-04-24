@@ -51,7 +51,7 @@ class EventController extends ResourceController
             $data = $this->request->getJSON(true);
 
             if (!$this->validate([
-                'name'        => 'required|min_length[3]|max_length[100]',
+                'title'        => 'required|min_length[3]|max_length[100]',
                 'slug'        => 'required|alpha_dash|min_length[3]|max_length[100]|is_unique[events.slug]',
                 'date'        => 'required|valid_date',
                 'location'    => 'required|min_length[3]|max_length[255]',
