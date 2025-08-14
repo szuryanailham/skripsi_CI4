@@ -60,6 +60,7 @@ class OrderController extends ResourceController
         try {
             $data = $this->request->getJSON(true);
 
+            // Validasi input
             if (!$this->validate([
                 'order_number' => 'required|is_unique[orders.order_number]',
                 'user_id'      => 'required|integer',
@@ -71,9 +72,12 @@ class OrderController extends ResourceController
                 return $this->failValidationErrors($this->validator->getErrors());
             }
 
+            // Insert data
             if (!$this->model->insert($data)) {
                 return $this->fail($this->model->errors());
             }
+
+            $data['id'] = $this->model->getInsertID(); // Menyertakan ID baru jika dibutuhkan
 
             return $this->respondCreated([
                 'status'  => 201,
@@ -206,6 +210,8 @@ class OrderController extends ResourceController
 
     public function downloadInvoice($id)
 {
+    
+
     $orderModel = new OrderModel();
     $userModel  = new UserModel();
     $eventModel = new EventModel();
@@ -234,4 +240,45 @@ class OrderController extends ResourceController
                           ->setHeader('Content-Disposition', 'attachment;filename="invoice-'.$order['order_number'].'.pdf"')
                           ->setBody($dompdf->output());
 }
+
+
+ public function uploadProof($id)
+    {
+        helper(['form', 'filesystem']);
+
+        // Validasi
+        $validationRule = [
+            'proof_image' => [
+                'label' => 'Bukti Pembayaran',
+                'rules' => 'uploaded[proof_image]|is_image[proof_image]|max_size[proof_image,2048]',
+            ],
+        ];
+
+        if (!$this->validate($validationRule)) {
+            return $this->failValidationErrors($this->validator->getErrors());
+        }
+
+        $orderModel = new OrderModel();
+        $order = $orderModel->find((int)$id);
+
+        if (!$order) {
+            return $this->failNotFound('Order tidak ditemukan.');
+        }
+
+        $file = $this->request->getFile('proof_image');
+
+        // Simpan file ke public/uploads/proofs
+        $newName = $file->getRandomName();
+        $file->move('uploads/proofs', $newName);
+
+        // Update data order
+        $orderModel->update($id, [
+            'proof_image' => 'uploads/proofs/' . $newName
+        ]);
+
+        return $this->respond([
+            'message' => 'Bukti pembayaran berhasil diunggah.',
+            'proof_image' => base_url('uploads/proofs/' . $newName),
+        ]);
+    }
 }

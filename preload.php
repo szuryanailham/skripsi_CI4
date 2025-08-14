@@ -43,7 +43,7 @@ class preload
                 '/system/Database/Postgre/',
                 '/system/Database/SQLite3/',
                 '/system/Database/SQLSRV/',
-                // Not needed for web apps.
+                // Not needed for web apps.php
                 '/system/Database/Seeder.php',
                 '/system/Test/',
                 '/system/CLI/',
