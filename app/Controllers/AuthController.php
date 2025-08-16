@@ -13,54 +13,64 @@ class AuthController extends ResourceController
 {
 
     
-    public function login()
-    {
-        $validation = Services::validation();
-        $rules = [
-            'email' => 'required|valid_email',
-            'password' => 'required'
-        ];
+public function login()
+{
+    $validation = Services::validation();
+    $rules = [
+        'email' => 'required|valid_email',
+        'password' => 'required'
+    ];
 
-        if (!$this->validate($rules)) {
-            return $this->fail($validation->getErrors(), 400);
-        }
-
-        $model = new ModelOtentikasi();
-        $email = $this->request->getVar('email');
-        $password = $this->request->getVar('password');
-
-        $data = $model->where('email', $email)->first();
-
-        if (!$data) {
-            return $this->failNotFound("Email tidak terdaftar.");
-        }
-        if (!password_verify($password, $data['password'])) {
-            return $this->fail("Password tidak sesuai.", 401);
-        }
-
-        $key = getenv('JWT_SECRET');
-        $payload = [
-            'iss' => 'server_api',
-            'aud' => 'users',
-            'sub' => $data['id'],
-            'email' => $data['email'],
-            'iat' => time(),
-            'exp' => time() + 3600 // Expire dalam 1 jam
-        ];
-        $token = JWT::encode($payload, $key, 'HS256');
-
-        $user = [
-            'id' => $data['id'],
-            'email' => $data['email'],
-            'name' => $data['name'] ?? null, // jika ada kolom name
-        ];
-
-        return $this->respond([
-            'message' => 'Login berhasil',
-            'user' => $user,
-            'access_token' => $token
-        ]);
+    if (!$this->validate($rules)) {
+        return $this->fail($validation->getErrors(), 400);
     }
+
+    $model = new ModelOtentikasi();
+    $email = $this->request->getVar('email');
+    $password = $this->request->getVar('password');
+
+    // Ambil data user dari database
+    $data = $model->where('email', $email)->first();
+
+    if (!$data) {
+        return $this->failNotFound("Email tidak terdaftar.");
+    }
+
+    if (!password_verify($password, $data['password'])) {
+        return $this->fail("Password tidak sesuai.", 401);
+    }
+
+    $key = getenv('JWT_SECRET');
+
+    // Tambahkan role dan status ke payload JWT
+    $payload = [
+        'iss'    => 'server_api',       // issuer
+        'aud'    => 'users',            // audience
+        'sub'    => $data['id'],        // subject
+        'email'  => $data['email'],     
+        'status' => $data['status'],    
+        'iat'    => time(),             // issued at
+        'exp'    => time() + 3600       // expired 1 jam
+    ];
+
+    // Encode JWT
+    $token = JWT::encode($payload, $key, 'HS256');
+
+    // Data user yang dikembalikan
+    $user = [
+        'id'     => $data['id'],
+        'email'  => $data['email'],
+        'name'   => $data['name'] ?? null,
+        'status' => $data['status']
+    ];
+
+    return $this->respond([
+        'message'       => 'Login berhasil',
+        'user'          => $user,
+        'access_token'  => $token
+    ]);
+}
+
 
     public function register()
     {
@@ -121,7 +131,8 @@ class AuthController extends ResourceController
             'user'          => [
                 'id'    => $user['id'],
                 'name'  => $user['name'],
-                'email' => $user['email']
+                'email' => $user['email'],
+                'status' => $data['status']
             ]
         ]);
     }

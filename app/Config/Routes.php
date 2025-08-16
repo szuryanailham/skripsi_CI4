@@ -5,44 +5,35 @@ use CodeIgniter\Router\RouteCollection;
 /**
  * @var RouteCollection $routes
  */
-
 $routes->get('/', 'Home::index');
 
+$routes->group('api', function ($routes) {    
+    // Auth routes
+    $routes->post('register', 'AuthController::register');
+    $routes->post('login', 'AuthController::login');
+    $routes->post('logout', 'AuthController::logout');
 
-// Define RESTful API routes
-$routes->group('api', function ($routes) {
-    $routes->get('home/events', 'Home::events');
-    
-    // Auth Routes (Tanpa Filter)
-    $routes->post('auth/register', 'AuthController::register');
-    $routes->post('auth/login', 'AuthController::login');
-    $routes->post('auth/logout', 'AuthController::logout');
+    // Show all events for guests
+    $routes->get('user/events', 'EventController::index');   
+     $routes->get('user/events/(:num)', 'EventController::show/$1');
 
-    // Resource Routes
-    $routes->resource('orders', [
-        'controller' => 'OrderController',
-        'namespace'  => 'App\Controllers',
- // Tambahkan otentikasi untuk semua order
-    ]);
-        
-    $routes->resource('users', [
-        'controller' => 'UsersController',
-        'namespace'  => 'App\Controllers',
+    $routes->group('', ['filter' => 'auth'], function ($routes) {
+    $routes->get('events/(:num)', 'EventController::show/$1');
+    $routes->post('orders', 'OrderController::create');
+    $routes->get('user/list-orders', 'OrderController::listOrders');
+    $routes->delete('orders/(:num)', 'OrderController::delete/$1');
+    $routes->post('orders/(:num)/upload-proof', 'OrderController::uploadProof/$1');
+     $routes->get('ticket/download/(:num)', 'TicketController::download/$1');
+    });
 
-    ]);
-    
-    $routes->resource('events', [
-        'controller' => 'EventController',
-        'namespace'  => 'App\Controllers',
-    ]);
 
-    // User Routes (Tanpa Filter)
-    $routes->get('user/profile', 'UserController::profile');
-    $routes->get('user', 'UserController::index');
+$routes->group('admin', ['filter' => 'admin'], function($routes) {
+   $routes->resource('events', ['controller' => 'EventController']);
+    $routes->get('orders', 'OrderController::index');
+   $routes->put('orders/(:num)/verify', 'OrderController::verifyOrder/$1');
+});
 
-    // Custom Order Routes (Dengan Filter)
-    $routes->get('orders/(:num)/invoice', 'OrderController::downloadInvoice/$1', ['filter' => 'otentikasi']);
-    $routes->put('orders/(:num)/verify', 'OrderController::verifyOrder', ['filter' => 'otentikasi']);
-    $routes->get('order/donwload/(:num)', 'OrderController::downloadInvoice/$1');
+
+
 
 });

@@ -77,5 +77,14 @@ class OrderModel extends Model
             ->first();
 }
 
+    public function getOrderWithRelations($ticketId)
+    {
+        return $this->select('orders.*, users.name as user_name, users.email as user_email, events.title as event_title, events.date as event_date')
+                    ->join('users', 'users.id = orders.user_id')
+                    ->join('events', 'events.id = orders.event_id')
+                    ->where('orders.id', $ticketId)
+                    ->first();
+    }
+
 
 }

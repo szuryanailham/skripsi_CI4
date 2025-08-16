@@ -2,6 +2,7 @@
 
 namespace Config;
 
+use App\Filters\AdminFilter;
 use CodeIgniter\Config\Filters as BaseFilters;
 use CodeIgniter\Filters\Cors;
 use CodeIgniter\Filters\CSRF;
@@ -12,7 +13,7 @@ use CodeIgniter\Filters\InvalidChars;
 use CodeIgniter\Filters\PageCache;
 use CodeIgniter\Filters\PerformanceMetrics;
 use CodeIgniter\Filters\SecureHeaders;
-use App\Filters\FilterJwt;
+use App\Filters\AuthFilter;
 
 class Filters extends BaseFilters
 {
@@ -35,7 +36,8 @@ class Filters extends BaseFilters
         'forcehttps'    => ForceHTTPS::class,
         'pagecache'     => PageCache::class,
         'performance'   => PerformanceMetrics::class,
-        'otentikasi' => FilterJwt::class,
+        'auth'          => AuthFilter::class,
+        'admin'         => AdminFilter::class
     ];
 
     /**
@@ -110,13 +112,7 @@ class Filters extends BaseFilters
      * @var array<string, array<string, list<string>>>
      */
     public array $filters = [
-        'otentikasi' => [
-            'before' => [
-                'api/events*',
-                'api/orders*',
-                 'api/users*'
-            ], // Menerapkan ke semua route API termasuk yang memiliki parameter
-        ],
+      
     ];
 
     

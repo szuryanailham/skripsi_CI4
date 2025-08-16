@@ -8,6 +8,8 @@ use App\Models\UserModel;
 use App\Models\EventModel;
 use Dompdf\Dompdf;
 use Exception;
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
 
 class OrderController extends ResourceController
 {
@@ -34,6 +36,7 @@ class OrderController extends ResourceController
         }
     }
 
+
     // GET: Ambil order berdasarkan ID
     public function show($id = null)
     {
@@ -53,6 +56,50 @@ class OrderController extends ResourceController
             return $this->failServerError('Terjadi kesalahan server: ' . $e->getMessage());
         }
     }
+
+public function listOrders()
+{
+    try {
+        // Ambil token dari header Authorization
+        $authHeader = $this->request->getHeaderLine('Authorization');
+        if (!$authHeader) {
+            return $this->failUnauthorized('Token tidak ditemukan');
+        }
+
+        $token = str_replace('Bearer ', '', $authHeader);
+
+        // Decode JWT
+        $secretKey = getenv('JWT_SECRET') ?: 'my_super_secret_key';
+        try {
+            $decoded = JWT::decode($token, new Key($secretKey, 'HS256'));
+        } catch (\Exception $e) {
+            return $this->failUnauthorized('Token tidak valid: ' . $e->getMessage());
+        }
+
+        $userId = $decoded->sub ?? null;
+        if (!$userId) {
+            return $this->failUnauthorized('User ID tidak ditemukan di token');
+        }
+
+        // Ambil semua order milik user yang login
+        $orders = $this->model
+            ->where('user_id', $userId)
+            ->findAll();
+
+        if (empty($orders)) {
+            return $this->failNotFound('Tidak ada order untuk user ini');
+        }
+
+        return $this->respond([
+            'status'  => 200,
+            'message' => 'Daftar order berhasil ditemukan',
+            'data'    => $orders
+        ]);
+
+    } catch (Exception $e) {
+        return $this->failServerError('Terjadi kesalahan server: ' . $e->getMessage());
+    }
+}
 
     // POST: Tambah order baru
     public function create()
@@ -89,35 +136,12 @@ class OrderController extends ResourceController
         }
     }
 
-    // PUT: Update order berdasarkan ID
-    public function update($id = null)
-    {
-        try {
-            $data = $this->request->getJSON(true);
-
-            if (!$this->model->find($id)) {
-                return $this->failNotFound('Order tidak ditemukan');
-            }
-
-            if (!$this->model->update($id, $data)) {
-                return $this->fail($this->model->errors());
-            }
-
-            return $this->respond([
-                'status'  => 200,
-                'message' => 'Order berhasil diperbarui',
-                'data'    => $data
-            ]);
-        } catch (Exception $e) {
-            return $this->failServerError('Terjadi kesalahan server: ' . $e->getMessage());
-        }
-    }
-
     // DELETE: Hapus order berdasarkan ID
     public function delete($id = null)
     {
         try {
-            if (!$this->model->find($id)) {
+             $order = $this->model->find($id);
+            if (!$order) {
                 return $this->failNotFound('Order tidak ditemukan');
             }
 
@@ -127,7 +151,9 @@ class OrderController extends ResourceController
 
             return $this->respondDeleted([
                 'status'  => 200,
-                'message' => 'Order berhasil dihapus'
+                'message' => 'Order berhasil dihapus',
+                'data' => $order
+
             ]);
         } catch (Exception $e) {
             return $this->failServerError('Terjadi kesalahan server: ' . $e->getMessage());
@@ -150,12 +176,6 @@ class OrderController extends ResourceController
             if ($order['status'] === 'paid') {
                 return $this->fail('Order sudah berstatus paid');
             }
-
-            $data = $this->request->getRawInput();
-            if (empty($data)) {
-                return $this->failValidationErrors('Data tidak boleh kosong');
-            }
-
             $updateData = ['status' => 'paid'];
             if (!$this->model->update($id, $updateData)) {
                 return $this->fail('Gagal memperbarui order');
@@ -207,39 +227,6 @@ class OrderController extends ResourceController
             return $this->failServerError('Terjadi kesalahan server: ' . $e->getMessage());
         }
     }
-
-    public function downloadInvoice($id)
-{
-    
-
-    $orderModel = new OrderModel();
-    $userModel  = new UserModel();
-    $eventModel = new EventModel();
-
-    $order = $orderModel->find($id);
-    if (!$order) return $this->failNotFound('Order tidak ditemukan');
-
-    $user = $userModel->find($order['user_id']);
-    $event = $eventModel->find($order['event_id']);
-
-    // Siapkan HTML dari view
-    $html = view('pdf/order_ticket', [
-        'order' => $order,
-        'user'  => $user,
-        'event' => $event
-    ]);
-
-    // Generate PDF
-    $dompdf = new Dompdf();
-    $dompdf->loadHtml($html);
-    $dompdf->setPaper('A4', 'portrait');
-    $dompdf->render();
-
-    // Download file
-    return $this->response->setHeader('Content-Type', 'application/pdf')
-                          ->setHeader('Content-Disposition', 'attachment;filename="invoice-'.$order['order_number'].'.pdf"')
-                          ->setBody($dompdf->output());
-}
 
 
  public function uploadProof($id)
